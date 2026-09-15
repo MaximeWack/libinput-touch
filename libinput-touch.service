@@ -1,0 +1,12 @@
+[Unit]
+Description=Rich touchpad and touchscreen automations
+Documentation=https://github.com/maximewack/libinput-touch
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/libinput-touch
+
+[Install]
+WantedBy=graphical-session.target
