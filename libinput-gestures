@@ -458,13 +458,13 @@ class HANDLER:
         self.capabilities = {v for k, v in self.cap_dict.items() if k in capabilities}
         self.size = (sizex, sizey)
 
-        # Create a gesture translation device for touchscreens
-        if 'touch' in self.capabilities:
-            self.translate_device = VIRTUAL_TRANSLATE(self)
-
         self.state = set()
         if self.capabilities.isdisjoint(actions.actions) or name.startswith(DEVICEPREFIX):
             self.state.add('disabled')
+
+        # Create a gesture translation device for touchscreens
+        if 'touch' in self.capabilities and not 'disabled' in self.state:
+            self.translate_device = VIRTUAL_TRANSLATE(self)
 
         verbose(f'{'Ignoring' if 'disabled' in self.state else 'Adding   '} device {name:50} ({self.device}) {self.capabilities}')
 
