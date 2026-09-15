@@ -884,7 +884,9 @@ class VIRTUAL_TRANSLATE:
         self.num_slots = self.copy_device.num_slots
 
         dev = libevdev.Device()
+        dev2 = libevdev.Device()
         dev.name = DEVICEPREFIX + " translate"
+        dev2.name = DEVICEPREFIX + " motion"
 
         for evbit in [libevdev.INPUT_PROP_POINTER,
                       libevdev.INPUT_PROP_BUTTONPAD,
@@ -897,6 +899,9 @@ class VIRTUAL_TRANSLATE:
                       libevdev.BTN_TOOL_QUADTAP]:
             dev.enable(evbit)
 
+        dev2.enable(libevdev.INPUT_PROP_DIRECT)
+        dev2.enable(libevdev.BTN_TOUCH)
+
         for a in [libevdev.ABS_X,
                   libevdev.ABS_Y,
                   libevdev.ABS_MT_SLOT,
@@ -904,21 +909,12 @@ class VIRTUAL_TRANSLATE:
                   libevdev.ABS_MT_POSITION_Y,
                   libevdev.ABS_MT_TRACKING_ID]:
             dev.enable(a, self.copy_device.absinfo[a])
+            dev2.enable(a, self.copy_device.absinfo[a])
 
         dev.enable(libevdev.ABS_MT_TOOL_TYPE, libevdev.InputAbsInfo(maximum = 2))
 
         self.dev = dev.create_uinput_device()
-
-        dev = libevdev.Device()
-        dev.name = DEVICEPREFIX + " motion"
-
-        for a in [libevdev.INPUT_PROP_POINTER,
-                  libevdev.BTN_LEFT,
-                  libevdev.REL_X,
-                  libevdev.REL_Y]:
-            dev.enable(a)
-
-        self.dev2 = dev.create_uinput_device()
+        self.dev2 = dev2.create_uinput_device()
 
     def flush(self):
         'Flush the evdev queue and get the fingers tracking ids at the same time'
@@ -947,24 +943,6 @@ class VIRTUAL_TRANSLATE:
 
         return(tracking_ids)
 
-    def translate_events(self, tracking_ids, tracked_fingers):
-        'Just translate the position events and discard the rest. Break out if finger change'
-
-        self.start_gesture(tracking_ids, tracked_fingers)
-
-        for e in self.copy_device.events():
-            if e.code == libevdev.ABS_MT_TRACKING_ID:
-                break
-            else:
-                self.dev.send_events([e])
-                x = self.copy_device.slots[0][libevdev.ABS_MT_POSITION_X]
-                y = self.copy_device.slots[0][libevdev.ABS_MT_POSITION_Y]
-                self.dev2.send_events([libevdev.InputEvent(libevdev.REL_X, int(self.prevX / 100) - int(x / 100)),
-                                       libevdev.InputEvent(libevdev.REL_Y, int(self.prevY / 100) - int(y / 100)),
-                                       libevdev.InputEvent(libevdev.SYN_REPORT, 0)])
-
-        self.end_gesture(tracking_ids, tracked_fingers)
-
     def start_gesture(self, tracking_ids, tracked_fingers):
         'Initiate the gesture with the specified number of fingers'
         o = []
@@ -979,6 +957,27 @@ class VIRTUAL_TRANSLATE:
                   libevdev.InputEvent(libevdev.SYN_REPORT, 0)])
 
         self.dev.send_events(o)
+
+    def translate_events(self, tracking_ids, tracked_fingers):
+        'Just translate the position events and discard the rest. Break out if finger change'
+
+        self.start_gesture(tracking_ids, tracked_fingers)
+
+        for e in self.copy_device.events():
+            if e.code == libevdev.ABS_MT_TRACKING_ID:
+                break
+            else:
+                self.dev.send_events([e])
+                self.dev2.send_events([libevdev.InputEvent(libevdev.ABS_MT_TRACKING_ID, 1),
+                                       libevdev.InputEvent(libevdev.ABS_MT_POSITION_X, self.prevX),
+                                       libevdev.InputEvent(libevdev.ABS_MT_POSITION_Y, self.prevY),
+                                       libevdev.InputEvent(libevdev.BTN_TOUCH, 1),
+                                       libevdev.InputEvent(libevdev.SYN_REPORT, 0)])
+                self.dev2.send_events([libevdev.InputEvent(libevdev.ABS_MT_TRACKING_ID, -1),
+                                       libevdev.InputEvent(libevdev.BTN_TOUCH, 0),
+                                       libevdev.InputEvent(libevdev.SYN_REPORT, 0)])
+
+        self.end_gesture(tracking_ids, tracked_fingers)
 
     def end_gesture(self, tracking_ids, tracked_fingers):
         'End the gesture'
