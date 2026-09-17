@@ -929,16 +929,12 @@ class VIRTUAL_TRANSLATE:
         try:
             for e in self.copy_device.events():
                 if e.type != libevdev.SYN_DROPPED:
-                    self.prevX = self.copy_device.slots[0][libevdev.ABS_MT_POSITION_X]
-                    self.prevY = self.copy_device.slots[0][libevdev.ABS_MT_POSITION_Y]
                     for i in range(self.num_slots):
                         tracking_ids[i] = self.copy_device.slots[i][libevdev.ABS_MT_TRACKING_ID]
 
         # If dropped event, sync the device (and discard the queued synced events)
         except libevdev.device.EventsDroppedException:
             for e in self.copy_device.sync():
-                self.prevX = self.copy_device.slots[0][libevdev.ABS_MT_POSITION_X]
-                self.prevY = self.copy_device.slots[0][libevdev.ABS_MT_POSITION_Y]
                 for i in range(self.num_slots):
                     tracking_ids[i] = self.copy_device.slots[i][libevdev.ABS_MT_TRACKING_ID]
 
@@ -972,8 +968,8 @@ class VIRTUAL_TRANSLATE:
             else:
                 self.dev.send_events([e])
                 self.dev2.send_events([libevdev.InputEvent(libevdev.ABS_MT_TRACKING_ID, 1),
-                                       libevdev.InputEvent(libevdev.ABS_MT_POSITION_X, self.prevX),
-                                       libevdev.InputEvent(libevdev.ABS_MT_POSITION_Y, self.prevY),
+                                       libevdev.InputEvent(libevdev.ABS_MT_POSITION_X, int(self.parent_handler.startPos[0][0] * options.touch_multiplier * self.parent_handler.resolution)),
+                                       libevdev.InputEvent(libevdev.ABS_MT_POSITION_Y, int(self.parent_handler.startPos[0][1] * options.touch_multiplier * self.parent_handler.resolution)),
                                        libevdev.InputEvent(libevdev.BTN_TOUCH, 1),
                                        libevdev.InputEvent(libevdev.SYN_REPORT, 0)])
                 self.dev2.send_events([libevdev.InputEvent(libevdev.ABS_MT_TRACKING_ID, -1),
