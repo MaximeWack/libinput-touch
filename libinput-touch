@@ -620,7 +620,7 @@ class HANDLER:
             res = self.actions[self.gesture][self.motion]
             self.available_actions = res[self.wclass] if self.wclass in res else res[None]
             if not 'continuous' in self.state:
-                self.data = dict(x = 0, y = 0, dx = 0, dy = 0, angle = 0, ratio = 0, dangle = 0, dratio = 0)
+                self.data = dict(x = 0, y = 0, dx = 0, dy = 0, ratio = 0, dratio = 0, angle = 0, dangle = 0)
 
         # Reset motion if only end action to mimic legacy behavior
         if list(self.available_actions) == ['end']:
@@ -652,7 +652,7 @@ class HANDLER:
             self.run(self.available_actions['chain'])
             self.state.add('chain')
             self.motion = None
-            self.data = dict(x = 0, y = 0, dx = 0, dy = 0, angle = 0, ratio = 0, dangle = 0, dratio = 0)
+            self.data = dict(x = 0, y = 0, dx = 0, dy = 0, ratio = 0, dratio = 0, angle = 0, dangle = 0)
 
         # Set holding if holding still
         if not 'holding' in self.state and self.gesture == 'hold':
