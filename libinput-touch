@@ -94,7 +94,7 @@ class OPTIONS:
         angle_min_threshold    = dict(default =  50, valid = float, help = 'Minimum angle to register a rotation'),
         hold_min_threshold     = dict(default =  .5, valid = float, help = 'Minimum time (in s) to register a hold'),
         touch_finger_tolerance = dict(default =  .1, valid = float, help = 'Time before registering finger number change'),
-        touch_multiplier       = dict(default =   6, valid = float, help = 'Multiplication factor for touchscreen gestures'),
+        touch_multiplier       = dict(default =   4, valid = float, help = 'Multiplication factor for touchscreen gestures'),
         update_timer           = dict(default =  .1, valid = float, help = 'Time interval at which update a continuous motion'),
         devpath                = dict(default = '/dev/input', valid = str, help = 'System device path'))
 
@@ -801,6 +801,9 @@ class HANDLER:
             lastCenter = center(self.lastPos)
 
             xrel, yrel = diff(prevCenter, lastCenter)
+
+            xrel /= self.fingers_
+            yrel /= self.fingers_
 
             ratio = 1
             angle = 0
