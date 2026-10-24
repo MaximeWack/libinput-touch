@@ -35,7 +35,7 @@ These can be configured to create complex interactions
 
 I kinda hate that we now have to do that, but *this software was made without the use of AI whatsoever*.
 It is made *by humans, for humans*.
-More on that in the [[*AI stance][AI stance]].
+More on that in the [[#ai-stance][AI stance]].
 
 * Background / motivation
 
@@ -68,7 +68,9 @@ Complex state machine for gesture recognition: https://gitlab.freedesktop.org/li
 
 initially a fork but more a ship of theseus situation, nearly everything rewritten from scratch
 
-** People coming from libinput-gestures
+#+html:<details><summary>
+** People coming from libinput-gestures, read this:
+#+html:</summary>
 
 Your libinput-gestures config can /almost/ be used as if libinput-touch was a drop-in replacement.
 However, I had to change a few things, so here's a guide to migrate your configuration.
@@ -117,7 +119,11 @@ If for some reason you still rely on such an old version of libinput, don't hesi
 Libinput-gestures also kept some compatibility with an old configuration format of theirs using colons. This change in the configuration format occurred over 9 years ago, and I'm using colons to group actions in the configuration.
 In case your configuration predates that change, you'll have to update it anyway in you want to use libinput-touch!
 
+#+html:</details>
+
+#+html:<details><summary>
 * Installation
+#+html:</summary>
 
 Some python dependencies:
 - ~python-xlib~ (optional, used on X11 to enable per-application actions and screen rotation detection)
@@ -132,21 +138,32 @@ sudo gpasswd -a $USER input
 #+end_src>
 
 Archlinux users can use the provided PKGBUILD for an easy installation.
+#+html:</details>
 
+#+html:<details><summary>
 * Running
+#+html:</summary>
 
 ** Command-line options
 
---conffile
---verbose
---debug
---raw
+- ~--conffile~: specify a conf file to use
+- ~--verbose~: verbose output
+- ~--debug~: verbose output without running the configured actions
+- ~--raw~: output the raw ~libinput debug-events~ output
 
 ** Autostart
 
 Enable and start the provided systemd service.
 
+#+begin_src sh
+systemctl --user enable libinput-touch.service --now
+#+end_src
+
+#+html:</details>
+
+#+html:<details><summary>
 * Configuration
+#+html:</summary>
 
 Configuration is read from command-line switches, or through a user-provided ~libinput-touch.conf~ file in ~$XDG-CONFIG~ or a system-wide configuration in ~/etc/libinput-touch.conf~
 
@@ -154,13 +171,17 @@ Configuration is read from command-line switches, or through a user-provided ~li
 
 The general pattern for configuring an action is the following:
 
+#+begin_src conf
 [touch|gesture] <gesture> <#fingers> <motion> [modifier] <command> [\[application class\]]
+#+end_src
 
 *** Gestures
 
 For now, we will focus on the base case:
 
+#+begin_src conf
 <gesture> <#fingers> <motion> <command>
+#+end_src
 
 Here are the different gestures:
 
@@ -253,7 +274,7 @@ In theory this is still a security risk as there are tricks to break containemen
 Sometimes you might want to run consecutive actions but in a more discrete manner.
 *chain* acts as the *pre* modifier in that the action is triggered as soon as the gesture is recognized, but it resets it so that it can be triggered again without lifting the fingers.
 Actually, all actions with a similar gesture and number of fingers marked as *chain* can be composed together.
-See the [[*Examples][examples]].
+See the [[#examples][examples]].
 
 **** end
 
@@ -347,7 +368,8 @@ It is recommended to put you application-specific actions at the end of the conf
 
 **** Simple gesture
 
-<simple.mp4>
+<https://github.com/MaximeWack/libinput-touch/blob/install/examples/simple.gif>
+#+html <video src='examples/simple_edit.mp4' width=540/>
 
 This shows 3 simple actions:
 - pinching out with 4 fingers starts gnome-pie, a radial launcher
@@ -361,7 +383,7 @@ rotate 4 ccw bspc node --close
 #+end_src
 
 The ~dbus-send~ command might look a bit convoluted, but as a rule of thumb I think it is better to interact with running applications through dedicated means instead of emulating keystrokes with ~xdotool~. This prevents having to update your configuration if the application keybinding changes.
-However, such mechanisms don't always exist and you can use the built-in keyboard emulator to save a call to xdotool (see [[*Keyboard emulation][keyboard emulation]])
+However, such mechanisms don't always exist and you can use the built-in keyboard emulator to save a call to xdotool (see [[#keyboard-emulation][keyboard emulation]])
 
 **** Chained gestures
 
@@ -378,7 +400,7 @@ swipe 3:
 
 **** Continuous gesture
 
-We've already seen a simple example of continuous gesture for [[*Using ongoing gesture data in the triggered action][volume control]], but here's a more exotic one which helps showcase.
+We've already seen a simple example of continuous gesture for [[#using-ongoing-gesture-data-in-the-triggered-action][volume control]], but here's a more exotic one which helps showcase.
 I'm (ab)using a feature in bspwm which makes it possible to configure the global workspace padding to show the conky system monitor that is displayed on the desktop underneath.
 
 <continuous_gesture.mp4>
@@ -414,7 +436,7 @@ touch hold+swipe 1:
 
 **** Complex example
 
-We've seen [[*chained gestures][desktop navigation with chained gestures]], but we can do better and allow carrying a window with us between desktops by holding first.
+We've seen [[#chained-gestures][desktop navigation with chained gestures]], but we can do better and allow carrying a window with us between desktops by holding first.
 
 Using bspwm, it is easy to achieve, we just run different commands for ~swipe 3~ and ~hold+swipe 3~.
 
@@ -476,14 +498,19 @@ swipe 2:
 ** Options
 
 The following options are available:
-- swipe_min_threshold: Minimum travel distance to register a swipe. Default value = 10
-- ratio_min_threshold    =default =  .5, Minimum ratio to register a pinch
-- angle_min_threshold    =default =  50, Minimum angle to register a rotation
-- hold_min_threshold     =default =  .5, Minimum time (in s) to register a hold
-- touch_finger_tolerance =default =  .1, Time before registering finger number change
-- touch_multiplier       =default =   6, Multiplication factor for touchscreen gestures
-- update_timer           =default =  .1, Time interval at which update a continuous motion
-- devpath                =default = '/dev/input', System device path
+
+#+html:<div align="center">
+| Option                 | Description                                          | Default value |
+|------------------------+------------------------------------------------------+---------------|
+| swipe_min_threshold    | Minimum travel distance (in mm)) to register a swipe |            10 |
+| ratio_min_threshold    | Minimum ratio to register a pinch                    |            .5 |
+| angle_min_threshold    | Minimum angle (in deg) to register a rotation        |            50 |
+| hold_min_threshold     | Minimum time (in s) to register a hold               |            .5 |
+| touch_finger_tolerance | Time before registering finger number change         |            .1 |
+| touch_multiplier       | Multiplication factor for touchscreen gestures       |             6 |
+| update_timer           | Time interval at which update a continuous motion    |            .1 |
+| devpath                | System device path                                   |  '/dev/input' |
+#+html:</div>
 
 The swipe threshold is in mm, calculated using the device resolution and the physical size reported by the kernel.
 The default swipe_min_threshold of 10 simply means that a swipe is registered after your fingers have travelled 1cm of your touchpad.
@@ -494,13 +521,14 @@ Since a touchscreen is usually much larger than a touchpad, the touch_multiplier
 
 The touch_finger_tolerance is the time before a new finger touch or a finger being lifted is registered. This helps dealing with small touch misses, as well as giving enough time to lift all fingers after a gesture without it being seen as a cancelled gesture.
 
+#+html:</details>
 * What's next
 
 Everything in here is mirrored into specific issues that go into greater detail and let you comment.
 
 ** Planned features
 
-- [ ] pinch gesture emulation
+- [x] pinch gesture emulation
 - [ ] rotate gesture emulation
 
 ** Maybe future features
