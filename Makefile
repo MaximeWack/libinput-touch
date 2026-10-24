@@ -1,5 +1,5 @@
-# Copyright (C) 2015 Mark Blakeney. This program is distributed under
-# the terms of the GNU General Public License.
+# Copyright (C) 2026 Maxime Wack
+# This program is distributed under the terms of the GNU General Public License.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,33 +12,42 @@
 # General Public License at <http://www.gnu.org/licenses/> for more
 # details.
 
-DOC = README.md
-SHELLCHECK_OPTS = -eSC2053,SC2064,SC2086,SC1117,SC2162,SC2181,SC2034,SC1090,SC2115
-
-DOCOUT = $(DOC:.md=.html)
+pkgname=libinput-touch
 
 all:
-	@echo "Type sudo make install|uninstall"
+	@echo "Run 'sudo make install|remove'"
 
 install:
-	@./libinput-gestures-setup -d "$(DESTDIR)" install
+	@echo "Installing ${pkgname}"
+	@install -D -m755 "${pkgname}" "$(DESTDIR)/usr/bin/${pkgname}"
+	@echo
+	@echo "To use ${pkgname} you need to add yourself to the input group:"
+	@echo '	sudo gpasswd -a $$USER input'
 
-uninstall:
-	@./libinput-gestures-setup -d "$(DESTDIR)" uninstall
+	@install -D -m644 "${pkgname}.service" "$(DESTDIR)/usr/lib/systemd/user/${pkgname}.service"
+	@echo
+	@echo 'Enable and start the systemd user service:'
+	@echo "	systemctl --user enable ${pkgname} --now"
+	@echo
+	@echo 'Add any environment variable required by the commands you configured to:'
+	@echo "	\$$HOME/.config/environment.d/${pkgname}.conf"
+	@echo 'so that they are known to the user service, then run:'
+	@echo '	systemctl --user daemon-reload'
 
-check:
-	flake8 libinput-gestures internal internal-test
-	shellcheck $(SHELLCHECK_OPTS) libinput-gestures-setup list-version-hashes
-	vermin -i -q -t 3.5 --no-tips libinput-gestures
-	vermin -i -q --no-tips internal internal-test
+	@install -D -m644 "${pkgname}.conf" "$(DESTDIR)/etc/${pkgname}.conf"
+	@echo
+	@echo 'Configuration files are at:'
+	@echo "	/etc/${pkgname}.conf (system-wide default)"
+	@echo "	\$$HOME/.config/${pkgname}.conf (optional per user)"
+	@echo
+	@echo "Modifying the configuration file automatically reloads ${pkgname}"
 
-doc:	$(DOCOUT)
+remove:
+	@echo "Removing ${pkgname}"
+	@echo
+	@echo 'Remove yourself from the input group:'
+	@echo '		sudo gpasswd -d $$USER input'
 
-$(DOCOUT): $(DOC)
-	markdown $< >$@
-
-test:
-	@./internal-test
-
-clean:
-	rm -rf $(DOCOUT)
+	@rm -rf "/usr/bin/${pkgname}"
+	@rm -rf "/usr/lib/systemd/user/${pkgname}.service"
+	@rm -rf "/etc/${pkgname}.conf"

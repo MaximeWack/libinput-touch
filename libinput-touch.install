@@ -1,0 +1,25 @@
+pkgname=libinput-touch
+
+post_install() {
+  echo 'post_install script'
+  echo
+  echo "Add yourself to the input group"
+  echo 'sudo gpasswd -a $USER input'
+  echo
+  echo 'Enable the systemd user service'
+  echo "systemctl --user enable ${pkgname} --now"
+  echo
+  echo 'Add any required environment variable to'
+  echo "   \$HOME/.config/environment.d/${pkgname}.conf"
+  echo
+  echo "Configuration files are at:"
+  echo "   /etc/${pkgname}.conf (system-wide default)"
+  echo "   \$HOME/.config/${pkgname}.conf (optional per user)"
+}
+
+post_remove() {
+  echo
+  echo 'To remove yourself from the input group:'
+  echo 'sudo gpasswd -d $USER input'
+  echo
+}

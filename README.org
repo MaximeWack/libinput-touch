@@ -1,0 +1,533 @@
+* Libinput-touch
+
+Libinput-touch is a tool for creating touchscreen automations.
+Think autohotkey/sxhkd/etc. but for touchpads and touchscreens.
+
+With libinput-touch you can transform any desktop environment, window manager, or any application really, into a touch-enabled program!
+
+It supports libinput touchpad gestures with up to 5 fingers (depending on your hardware):
+- swipe (all fingers move in the same direction: up/down/left/right)
+- pinch (in/out)
+- rotate (clockwise/counterclockwise)
+- holding [+ gesture]
+
+It also supports the same gestures on a touchscreen with up to 10 fingers (depending on your hardware)
+
+It also supports libinput switches (on/off):
+- lid
+- tablet-mode
+- keypad-slide
+
+Each motion can be configured to run an arbitrary command at the end of the motion, but we also support more complex actions:
+- continuously updated gestures
+- early command execution as soon as a gesture is recognized
+- chainable gestures (think like continuous but with discrete execution)
+- alternative command to execute when a motion is cancelled (libinput reports a gesture as cancelled if it's not "cleanly" terminated, ie all fingers are lifted within a very small amount of time)
+
+And some more good stuff such as:
+- device rotation for touchscreens (only on X11)
+- dynamic reload on configuration change
+- libinput gesture emulation
+- touchscreen gesture translation
+- application-specific actions (only on X11)
+
+These can be configured to create complex interactions
+
+I kinda hate that we now have to do that, but *this software was made without the use of AI whatsoever*.
+It is made *by humans, for humans*.
+More on that in the [[*AI stance][AI stance]].
+
+* Background / motivation
+
+fork of libinput-gestures
+https://github.com/bulletmark/libinput-gestures
+
+PR adding touch gestures rejected
+https://github.com/bulletmark/libinput-gestures/pull/247
+
+works fine for me
+the maintainer is an asshat
+examples of PR and issues:
+Stepped continuous action: https://github.com/bulletmark/libinput-gestures/pull/216
+App-specific actions: https://github.com/bulletmark/libinput-gestures/pull/195
+Continuous gestures: https://github.com/bulletmark/libinput-gestures/pull/157
+https://github.com/bulletmark/libinput-gestures/pull/148
+https://github.com/bulletmark/libinput-gestures/issues/377
+Configurable threshold: https://github.com/bulletmark/libinput-gestures/pull/153
+Early gesture actions: https://github.com/bulletmark/libinput-gestures/pull/38
+https://github.com/bulletmark/libinput-gestures/issues/374
+etc., etc., you get the gist
+
+motivated me to make a fork and address some feature requests and own desires
+
+libinput inner workings not really configurable to worked around that
+No configurable user options: https://wayland.freedesktop.org/libinput/doc/latest/faqs.html#can-you-add-a-configuration-option-for-feature
+No touchscreen gestures: https://wayland.freedesktop.org/libinput/doc/latest/gestures.html#touchscreen-gestures
+Hard-coded thresholds: https://gitlab.freedesktop.org/libinput/libinput/-/blob/main/src/evdev-mt-touchpad-gestures.c?ref_type=heads
+Complex state machine for gesture recognition: https://gitlab.freedesktop.org/libinput/libinput/-/blob/main/doc/touchpad-gestures-state-machine.svg?ref_type=heads
+
+initially a fork but more a ship of theseus situation, nearly everything rewritten from scratch
+
+** People coming from libinput-gestures
+
+Your libinput-gestures config can /almost/ be used as if libinput-touch was a drop-in replacement.
+However, I had to change a few things, so here's a guide to migrate your configuration.
+
+*** Breaking changes
+
+**** Action ordering
+
+The number of fingers is now mandatory and needs to appear /before/ the motion, not /after/.
+ie: instead of gesture <gesture> <motion> [#fingers] <command> it is now gesture <gesture> <#fingers> <motion> <command>
+
+**** Extended gestures
+
+Diagonal directions for swiping gestures are no longer supported.
+Clockwise and anti-clockwise for pinch are now a separated gesture
+
+**** Naming
+
+Pinch with rotation is now explicitely a rotate, with cw (clockwise) and ccw (counter-clockwise) directions.
+
+To recap, you can:
+- swipe ~up~, ~down~, ~left~, or ~right~
+- pinch ~in~ or ~out~
+- rotate ~cw~ or ~ccw~
+
+**** Options
+
+The ~device~ option has been removed. Libinput-touch listens to all devices relevant to the configured actions (ie: if no switch triggered action has been configured, libinput-touch will skip switch events)
+
+The swipe_min_threshold setting is now in mm, a much easier unit to grasp for humans instead of dots which required you to either know your specific device resolution or doing some guesswork.
+
+**** _internal commands
+
+So called _internal commands have completely been removed as they only implemented some DE-specific behavior.
+Use ~wmctrl~ or control tools specific to your window manager such as ~bspc~ for bspwm, ~i3-msg~ and ~sway-msg~ for i3 and sway, etc.
+
+*** What stays compatible
+
+Assuming you've swapped <directions> and <#fingers> and have adapted the naming convention, the behavior should stay the same, as the default for an action is to be executed at the end of a gesture
+
+*** Diffs in compatibility (libinput, lib-gestures)
+
+Libinput-gestures kept some old compatibilities, such as the way the libinput tools were named before v1.18. This was over 5 years ago.
+If for some reason you still rely on such an old version of libinput, don't hesitate to open an issue and I'll consider adding a dedicated option.
+
+Libinput-gestures also kept some compatibility with an old configuration format of theirs using colons. This change in the configuration format occurred over 9 years ago, and I'm using colons to group actions in the configuration.
+In case your configuration predates that change, you'll have to update it anyway in you want to use libinput-touch!
+
+* Installation
+
+Some python dependencies:
+- ~python-xlib~ (optional, used on X11 to enable per-application actions and screen rotation detection)
+- ~python-libevdev~ (required for gesture emulation and translation)
+
+Libinput-tools: ~libinput debug-events~ tool
+
+You need to add yourself to the input group and restart your session.
+
+#+begin_src sh
+sudo gpasswd -a $USER input
+#+end_src>
+
+Archlinux users can use the provided PKGBUILD for an easy installation.
+
+* Running
+
+** Command-line options
+
+--conffile
+--verbose
+--debug
+--raw
+
+** Autostart
+
+Enable and start the provided systemd service.
+
+* Configuration
+
+Configuration is read from command-line switches, or through a user-provided ~libinput-touch.conf~ file in ~$XDG-CONFIG~ or a system-wide configuration in ~/etc/libinput-touch.conf~
+
+** Actions
+
+The general pattern for configuring an action is the following:
+
+[touch|gesture] <gesture> <#fingers> <motion> [modifier] <command> [\[application class\]]
+
+*** Gestures
+
+For now, we will focus on the base case:
+
+<gesture> <#fingers> <motion> <command>
+
+Here are the different gestures:
+
+**** Swipe
+
+All fingers travel in the same direction in a ~up~, ~down~, ~left~, or ~right~ *motion*.
+1 finger swipes are not possible on touchpads (as they are simply seen as mouse pointer movements). However, they are supported on touchscreens but not really recommanded unless they are application-specific or behind a hold.
+2 finger swipes on touchpads are normally seen by libinput as finger scrolling events, but they are supported here. Same warning as above, 2 finger swipes should be use with precautions as you would be tying actions to a very mundane gesture.
+
+For example:
+~swipe 4 up xterm~ will launch a terminal as soon as you finish a swipe gesture in an upward motion using 4 fingers.
+
+**** Pinch
+
+Fingers all get closer or farther from each other, in an ~in~ or ~out~ *motion*.
+Pinches are supported for 2+ fingers.
+
+**** Rotate
+
+Fingers rotate around their collective center, in a ~cw~ (clockwise) or ~ccw~ (counter-clockwise) *motion*.
+Rotates are supported for 2+ fingers.
+
+**** Hold
+
+Fingers are held in place for a short amount of time.
+Holds are supported for any number of fingers.
+
+**** Hold+<gesture>
+
+Hold can be combined with any other gesture.
+It will trigger only if a gesture with the configured number of fingers happens after those fingers have been held in place for a short amount of time.
+
+For example:
+
+~hold+pinch 4 in xkill~ will let you kill any window by holding 4 fingers then pinching them inward.
+
+*** Touchscreen gestures
+
+Defining an action starting directly with the gesture actually enables that action both for touchpads and touchscreens.
+However, you can restrict an action to either one of those devices by prefixing the action with ~touch~ for touchscreens and ~gesture~ for touchpads.
+
+*** Application-specific gestures
+
+You can restrict actions to execute only when a certain application is focused by suffixing the action with the application classname in square brackets.
+
+For example:
+~touch swipe 2 right _key right [mpv]~ will skip forward in mpv if you swipe right with 2 fingers on a touchscreen.
+
+*** Gesture modifiers
+
+By default, all actions execute their command at the end of the gesture, ie when all the involved fingers have been released within a short amount of time.
+
+However, you can use *modifiers* to modulate this behavior.
+
+**** pre
+
+With *pre* you can execute an action as soon as a gesture is recognized.
+
+For example:
+~swipe 2 left pre xterm~ will run xterm as soon as libinput-touch recognizes you are swiping left with 2 fingers, without waiting for you to finish the gesture and released your fingers.
+
+This can be used to improve reactivity, but also as a block to build more complex, multistep actions (see the examples below)
+
+**** continuous
+
+With *continuous*, the command associated with the action is ran at every update.
+This is made even more useful by the ability to pass data from the ongoing gesture to the command
+
+***** Using ongoing gesture data in the triggered action
+
+You can include any arbitrary computation using the following variables by enclosing them in curly brackets in your command:
+- x, y: total movement of the fingers barycenter since the start of the gesture
+- dx, dy: movement since the last frame 
+- ratio: total pinch ratio since the start of the gesture
+- dratio: change in ratio since the last frame
+- angle: total rotation angle since the start of the gesture
+- dangle: rotation since the last frame
+
+For example, let's say you want to configure volume control by swiping 4 fingers up and down:
+~swipe 4 up continuous pulsemixer --change-volume {int(-dy)}~
+~swipe 4 down continuous pulsemixer --change-volume {int(-dy)}~
+
+(you'll often have to cast values as int with external programs)
+
+Everything between the curly brackets is evaluated with python's ~eval~ in a local context containing only the gesture data.
+In theory this is still a security risk as there are tricks to break containement, but in any case you are already running a program that allows you to run arbitrary commands on your computer so… ¯\\_(ツ)_/¯
+
+**** chain
+
+Sometimes you might want to run consecutive actions but in a more discrete manner.
+*chain* acts as the *pre* modifier in that the action is triggered as soon as the gesture is recognized, but it resets it so that it can be triggered again without lifting the fingers.
+Actually, all actions with a similar gesture and number of fingers marked as *chain* can be composed together.
+See the [[*Examples][examples]].
+
+**** end
+
+The default modifier: the command is run at the normal end of a gesture.
+
+**** post
+
+When a gesture is not properly ended (ie., not all fingers are lifted at once), it is cancelled.
+You can use the *post* modifier if you want a command to be run even in the case of a cancelled gesture.
+This is mostly useful when defining complex gestures as a fallback to restore state in case the gesture is aborted.
+
+*** Gesture emulation
+
+*** Gesture translation
+
+*** Keyboard emulation
+
+*** Switches
+
+The general syntax to respond to switch events is
+
+switch <switch_name> <state> <command>
+
+Three switches are supported by libinput:
+- lid: when a laptop lid is opened/closed
+- tablet-mode: when a 2-in-1 laptop is folded into a tablet
+- keypad-slide: apparently some device have sliding keypads?
+
+For example:
+
+#+begin_src
+switch tablet-mode on toggle_autorotate
+switch tablet-mode off toggle_autorotate
+#+end_src
+
+(toggle_autorotate is a custom script of mine that monitors the device orientation through its accelerometer and triggers various changes to respond to the new orientation (xrandr screen rotation, xsetwacom touch input rotation, wallpaper change, bar and tray resizing, etc.)
+
+Mainly I added the support for libinput switches for this specific use case as it relates to touchscreen support on the linux desktop and couldn't find any other tool that allowed configuring an arbitrary action in response to the toggling of the tablet-mode switch.
+
+*** Configuration shorthands
+
+**** Grouped actions prefixes
+
+Let's say you've defined multiple related gestures, such as navigating between desktops in bspwm:
+#+begin_src 
+touch swipe 3 left bspc desktop --focus next
+touch swipe 3 right bspc desktop --focus prev
+touch swipe 3 up bspc desktop --focus last
+#+end_src
+
+You can avoid repetitions by extracting the prefix:
+#+begin_src
+touch swipe 3:
+  left bspc desktop --focus next
+  right bspc desktop --focus prev
+  up bspc desktop --focus last
+#+end_src
+
+The indentation *must* be 2 spaces (or one tab)
+
+You can stack those prefixes:
+#+begin_src 
+touch:
+  pinch:
+    3 out bspc node focused -t \~fullscreen
+    4 out gnome-pie -o 474
+  rotate:
+    4 ccw bspc node --close
+    5 ccw slimlock
+#+end_src
+
+**** Grouped per-application actions
+
+In the same fashion, you can group application-specific actions
+
+#+begin_src 
+touch swipe 2 left _key left [mpv]
+touch swipe 2 right _key right [mpv]
+#+end_src
+
+#+begin_src 
+[mpv]
+touch swipe 2:
+  left _key left 
+  right _key right 
+#+end_src
+
+It is recommended to put you application-specific actions at the end of the config, but if needed you can still return to system-wide actions by using empty square brackets: []
+
+*** Examples
+
+**** Simple gesture
+
+<simple.mp4>
+
+This shows 3 simple actions:
+- pinching out with 4 fingers starts gnome-pie, a radial launcher
+- swiping up with 5 fingers shows onboard, an on-screen keyboard
+- rotating counter-clockwise with 4 fingers closes the focused window
+
+#+begin_src 
+pinch 4 out gnome-pie --open 474
+swipe 5 up dbus-send --type=method_call --dest=org.onboard.Onboard /org/onboard/Onboard/Keyboard org.onboard.Onboard.Keyboard.ToggleVisible
+rotate 4 ccw bspc node --close
+#+end_src
+
+The ~dbus-send~ command might look a bit convoluted, but as a rule of thumb I think it is better to interact with running applications through dedicated means instead of emulating keystrokes with ~xdotool~. This prevents having to update your configuration if the application keybinding changes.
+However, such mechanisms don't always exist and you can use the built-in keyboard emulator to save a call to xdotool (see [[*Keyboard emulation][keyboard emulation]])
+
+**** Chained gestures
+
+<chained_gestures.mp4>
+
+Switching between desktops is the poster child for chained gestures, as repeating a 3 finger swipe over and over to navigate can quickly become tiresome.
+Using chained gestures it is very easy to continue switching desktop without lifting your fingers, and also revert the motion.
+
+#+begin_src 
+swipe 3:
+  left chain bspc desktop --focus next
+  right chain bspc desktop --focus prev
+#+end_src
+
+**** Continuous gesture
+
+We've already seen a simple example of continuous gesture for [[*Using ongoing gesture data in the triggered action][volume control]], but here's a more exotic one which helps showcase.
+I'm (ab)using a feature in bspwm which makes it possible to configure the global workspace padding to show the conky system monitor that is displayed on the desktop underneath.
+
+<continuous_gesture.mp4>
+
+#+begin_src 
+swipe 4:
+  left:
+    continuous bspc config right_padding {int(max(0, 490 - 490 * (-x / 40 - 1) ** 4))}
+    post bspc config right_padding 0
+  right:
+    continuous bspc config left_padding {int(max(0, 490  -490 * (x / 40 - 1) ** 4))}
+    post bspc config left_padding 0
+#+end_src
+
+I'm using a quartic transform of the horizontal distance traveled during the swiping motion to give some "tension" to the movement.
+I'm using the *post* modifier to prevent a state in which the padding would not return to normal. Here padding returns to 0 whatever happens at the end of the gesture.
+
+**** Hold + gesture
+
+Configuring actions to trigger with a single finger swipe is in general to be avoided, but can be useful if guarded by having to hold first.
+
+<hold+swipe.mp4>
+
+Hold then swipe to move windows around, with chainable gestures.
+
+#+begin_src 
+touch hold+swipe 1:
+  left chain bspc node --swap west.normal.local
+  right chain bspc node --swap east.normal.local
+  up chain bspc node --swap north.normal.local
+  down chain bspc node --swap south.normal.local
+#+end_src
+
+**** Complex example
+
+We've seen [[*chained gestures][desktop navigation with chained gestures]], but we can do better and allow carrying a window with us between desktops by holding first.
+
+Using bspwm, it is easy to achieve, we just run different commands for ~swipe 3~ and ~hold+swipe 3~.
+
+#+begin_src 
+swipe 3:
+  left chain bspc desktop --focus next
+  right chain bspc desktop --focus prev
+
+hold+swipe 3:
+  left chain bspc node --to-desktop next --follow
+  right chain bspc node --to-desktop prev --follow
+#+end_src
+
+Now, this can get confusing as it is not easy to tell if you held for long enough or not to carry a window, or that you've actually held for too long and are now moving a window around without intending to.
+This can be fixed with a bit of visual feedback, for example by popping the window of the tiling before moving it then putting it back in tiling mode after the gesture is ended.
+
+<complex.mp4>
+
+This way and as you can see at the end of the video, you can see the window being lifted before moving and have a choice to put it back.
+We do that by adding a simple hold action to execute early with *pre* to pop the window into floating mode, and an action to execute after a simple hold with *end* to put the window back into tiling mode.
+The window is also put back into tiling mode at the end of the hold+swipe gesture in any cases so that we never end up with a floating window.
+
+#+begin_src 
+swipe 3:
+  left chain bspc desktop --focus next
+  right chain bspc desktop --focus prev
+
+hold 3:
+  pre bspc node --state floating
+  end bspc node --state tiled
+
+hold+swipe 3:
+  left chain bspc node --to-desktop next --follow
+  right chain bspc node --to-desktop prev --follow
+
+  left post bspc node --state tiled
+  right post bspc node --state tiled
+#+end_src
+
+**** Gesture translation
+
+mpv (a minimalistic but full featured video player) recognizes finger scroll gestures to control its internal volume with up/down and seek through the video with left/right.
+However, it doesn't support touchscreen gestures.
+Gesture translation repeats the finger motions seen by evdev and replays them in a gesture capable virtual device, while using /another/ virtual device cloned from the original touch device to keep the cursor in place.
+
+To make it work, gesture translation must be triggered early with the *pre* modifier.
+It is recommended to make these translations only per-application as they would interfere with the handling of touch interactions by touch-enabled applications like firefox/chrome.
+
+<gesture_translation.mp4>
+
+#+begin_src 
+[mpv]
+  
+swipe 2:
+  up pre _translate
+  down pre _translate
+#+end_src
+
+** Options
+
+The following options are available:
+- swipe_min_threshold: Minimum travel distance to register a swipe. Default value = 10
+- ratio_min_threshold    =default =  .5, Minimum ratio to register a pinch
+- angle_min_threshold    =default =  50, Minimum angle to register a rotation
+- hold_min_threshold     =default =  .5, Minimum time (in s) to register a hold
+- touch_finger_tolerance =default =  .1, Time before registering finger number change
+- touch_multiplier       =default =   6, Multiplication factor for touchscreen gestures
+- update_timer           =default =  .1, Time interval at which update a continuous motion
+- devpath                =default = '/dev/input', System device path
+
+The swipe threshold is in mm, calculated using the device resolution and the physical size reported by the kernel.
+The default swipe_min_threshold of 10 simply means that a swipe is registered after your fingers have travelled 1cm of your touchpad.
+
+The ratio threshold is the absolute value of the log of the ratio (ie, if you move out your fingers such that you are doubling the distance between them, the ratio is 2 and its log is ≈.7. If you halved the distance between your fingers the ratio would be .5 but its log a nice symmetrical ≈-.7)
+
+Since a touchscreen is usually much larger than a touchpad, the touch_multiplier setting scales every motion down to account for wider gestures on touchscreens.
+
+The touch_finger_tolerance is the time before a new finger touch or a finger being lifted is registered. This helps dealing with small touch misses, as well as giving enough time to lift all fingers after a gesture without it being seen as a cancelled gesture.
+
+* What's next
+
+Everything in here is mirrored into specific issues that go into greater detail and let you comment.
+
+** Planned features
+
+- [ ] pinch gesture emulation
+- [ ] rotate gesture emulation
+
+** Maybe future features
+
+- [ ] kinetic scrolling (aka coasting) for applications not supporting it natively (libinput does not support system-wide kinetic scrolling: https://wayland.freedesktop.org/libinput/doc/latest/faqs.html#kinetic-scrolling-does-not-work)
+- [ ] circular scrolling (though it now exists in the latest libinput sources without being documented, but seems to be directly only at round touchpads)
+- [ ] pure libevdev implementation
+- [ ] handling of pressure-sensitive touchpads
+- [ ] handling graphical tablets tools (buttons, proximity, etc.)
+
+** Wayland support
+
+Libinput being a part of the Wayland project, (nearly) everything should work on Wayland.
+However, for the moment, two features are X11-only: application-specific actions and screen rotation handling, which after a bit of researching look a bit challenging to achieve as far as I know.
+
+Screen rotation handling requires python-xlib and only works on X11.
+I am not knowledgeable on Wayland and have no way of extensively testing it as I am not using Wayland, but if anybody with Wayland know-how could help me I'd be thrilled!
+Same thing with application-specific actions: it apparently seems to be a bit complex on Wayland to get the window name/class that is focused or pointed at, or at least it depends on the specific compositor engine being used and there is no canonical way of getting it (such as with xdotool on X11, and here with python-xlib).
+I'd gladly accept help on this issue too!
+
+* AI stance
+
+This software has been written entirely without the help of any so-called "AI" in any way shape or form.
+
+I have been programming computers as a hobby for more than 30 years and I have no desire delegating an activity I enjoy doing to a piece of software I have not even written myself.
+I have access to very locally-sourced, real, natural intelligence. Why would I forfeit this for sloppy average fake intelligence?
+
+What applies to me also applies to this codebase, and as such I will not accept issues and/or contributions that were produced by or with one of these tools.
+
+

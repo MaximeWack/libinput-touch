@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-NoDisplay=true
-Terminal=false
-Name=Libinput Touch
-Exec=/usr/bin/libinput-touch
-Icon=libinput-touch
-Comment=Rich touchpad and touchscreen automations
-Categories=GNOME;GTK;System;
