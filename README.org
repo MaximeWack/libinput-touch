@@ -368,12 +368,13 @@ It is recommended to put you application-specific actions at the end of the conf
 
 **** Simple gesture
 
-<https://github.com/MaximeWack/libinput-touch/blob/install/examples/simple.gif>
-#+html <video src='examples/simple_edit.mp4' width=540/>
+https://github.com/user-attachments/assets/d6f754f0-4fd9-4de4-bf6d-6f8917ab8b56
 
 This shows 3 simple actions:
 - pinching out with 4 fingers starts gnome-pie, a radial launcher
+  libreoffice is launched, and we chose to create a new writer document
 - swiping up with 5 fingers shows onboard, an on-screen keyboard
+  and we begin typing
 - rotating counter-clockwise with 4 fingers closes the focused window
 
 #+begin_src 
@@ -387,7 +388,7 @@ However, such mechanisms don't always exist and you can use the built-in keyboar
 
 **** Chained gestures
 
-<chained_gestures.mp4>
+https://github.com/user-attachments/assets/45eb1aa9-8dcb-445f-8f46-b7ee20f64f70
 
 Switching between desktops is the poster child for chained gestures, as repeating a 3 finger swipe over and over to navigate can quickly become tiresome.
 Using chained gestures it is very easy to continue switching desktop without lifting your fingers, and also revert the motion.
@@ -403,7 +404,7 @@ swipe 3:
 We've already seen a simple example of continuous gesture for [[#using-ongoing-gesture-data-in-the-triggered-action][volume control]], but here's a more exotic one which helps showcase.
 I'm (ab)using a feature in bspwm which makes it possible to configure the global workspace padding to show the conky system monitor that is displayed on the desktop underneath.
 
-<continuous_gesture.mp4>
+https://github.com/user-attachments/assets/aa546d4e-1e2f-4e96-b29b-d7733d47bcbb
 
 #+begin_src 
 swipe 4:
@@ -422,7 +423,7 @@ I'm using the *post* modifier to prevent a state in which the padding would not 
 
 Configuring actions to trigger with a single finger swipe is in general to be avoided, but can be useful if guarded by having to hold first.
 
-<hold+swipe.mp4>
+https://github.com/user-attachments/assets/08a88da2-48fd-4e7e-acf7-344537e5434f
 
 Hold then swipe to move windows around, with chainable gestures.
 
@@ -453,7 +454,7 @@ hold+swipe 3:
 Now, this can get confusing as it is not easy to tell if you held for long enough or not to carry a window, or that you've actually held for too long and are now moving a window around without intending to.
 This can be fixed with a bit of visual feedback, for example by popping the window of the tiling before moving it then putting it back in tiling mode after the gesture is ended.
 
-<complex.mp4>
+https://github.com/user-attachments/assets/8c99301b-faec-4a85-b716-cb0510441cad
 
 This way and as you can see at the end of the video, you can see the window being lifted before moving and have a choice to put it back.
 We do that by adding a simple hold action to execute early with *pre* to pop the window into floating mode, and an action to execute after a simple hold with *end* to put the window back into tiling mode.
@@ -485,7 +486,7 @@ Gesture translation repeats the finger motions seen by evdev and replays them in
 To make it work, gesture translation must be triggered early with the *pre* modifier.
 It is recommended to make these translations only per-application as they would interfere with the handling of touch interactions by touch-enabled applications like firefox/chrome.
 
-<gesture_translation.mp4>
+https://github.com/user-attachments/assets/fb4de90f-54af-4665-9dbf-8a4b8b5c7e67
 
 #+begin_src 
 [mpv]
